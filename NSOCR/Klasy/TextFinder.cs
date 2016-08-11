@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace NSOCR
+namespace NSOCR.Klasy
 {
     internal class TextFinder
     {
-        List<string> Currency = new List<string>();
+        private List<string> Currency = new List<string>();
         private List<string> Dictionary;
         private string FakturaNumber;
         private int Pos;
+        private string SelectedWord;
+
         //======================Wyszukiwanie indeksu słowa===================================
         private void FindWordIndex(string Text, string NameDictionary)
         {
@@ -18,11 +20,15 @@ namespace NSOCR
             Pos = 0;
             foreach (string word in Dictionary)
             {
+                SelectedWord = word;
                 Pos = Text.IndexOf(word);
                 if (Pos > 0)
+                {
                     break;
+                }
             }
         }
+
         //======================Wyszukiwanie indeksu słowa w określonym zakresie=============
         private void FindWordIndex(string Text, int PosBeg, int PosEnd)
         {
@@ -34,6 +40,7 @@ namespace NSOCR
                 Pos = FakturaNumber.IndexOf("nr");
             }
         }
+
         //========================załadowanie słowników======================================
         private void LoadDictionary(string NameDictionary)
         {
@@ -42,7 +49,9 @@ namespace NSOCR
             StreamReader sr = new StreamReader(Path.Combine(Environment.CurrentDirectory, @"Dictionary\", NameDictionary), Encoding.Unicode);
             while ((line = sr.ReadLine()) != null)
                 Dictionary.Add(line);
+            sr.Close();
         }
+
         //====================== wyszukiwanie dat============================================
         public string FindDate(string text, string NameDictionary)
         {
@@ -65,8 +74,9 @@ namespace NSOCR
                     }
                 }
             }
-            return "Error";
+            return "20000101";
         }
+
         //====================== wyszukiwanie NIPU===========================================
         public string FindNIP(string text, string NameDictionary)
         {
@@ -74,7 +84,7 @@ namespace NSOCR
             string NIP = null;
             int pos = Pos;
             for (int i = pos; i <= pos + text.Length; i++)
-            { 
+            {
                 if ((int)text[i] >= (int)'0' && (int)text[i] <= (int)'9')
                 {
                     NIP += text[i];
@@ -86,11 +96,9 @@ namespace NSOCR
                     NIP = null;
                 }
             }
-
-            if (string.IsNullOrEmpty(NIP))
-                NIP = ",";
             return NIP;
         }
+
         //====================== wyszukiwanie nr Faktury=====================================
         public string FindNrFaktury(string text, string NameDictionaryBegine, string NameDictionaryEnd)
         {
@@ -101,7 +109,7 @@ namespace NSOCR
             int EndPos = Pos;
             FindWordIndex(text, BeginePos, EndPos);
             int pos = Pos;
-            if (FakturaNumber == "-1")
+            if (pos == -1)
                 return "Błąd";
             else
             {
@@ -118,14 +126,31 @@ namespace NSOCR
             }
         }
 
+        //===========================  Nr Umowy    ==========================================
+        public string FindNrUmowy(string text, string Dictionary)
+        {
+            string Lising = null;
+            FindWordIndex(text, Dictionary);
+            int pos = Pos;
+            if (pos != null)
+            {
+                for (int i = pos + SelectedWord.Length; i <= text.Length; i++)
+                {
+                    Lising += text[i];
+                    if (Lising.Length == 9)
+                        break;
+                }
+            }
+            return Lising;
+        }
+
         //===========================kwota do zapłacenia ===================================>
         public string FindToPay(string text, string Dictionary)
         {
-
             string money = null;
             FindWordIndex(text, Dictionary);
             int pos = Pos;
-            for(int i= pos+9;i<=text.Length;i++)
+            for (int i = pos + 9; i <= text.Length; i++)
             {
                 char ste = text[i];
                 if ((int)text[i] >= (int)'0' && (int)text[i] <= (int)'9')
@@ -137,21 +162,43 @@ namespace NSOCR
                 }
             }
             return money;
+
         }
 
-        public List<string> FindCurrency(string text,string NameDictionary)
+        public string SecondPay(string text, string Dictionary)
+        {
+            string money = null;
+            FindWordIndex(text, Dictionary);
+            int pos = Pos;
+            if (pos != null)
+            {
+                for (int i = pos + 4; i <= text.Length; i++)
+                {
+                    char ste = text[i];
+                    if ((int)text[i] >= (int)'0' && (int)text[i] <= (int)'9')
+                        money += text[i];
+                    else
+                    {
+                        pos = i;
+                        break;
+                    }
+                }
+            }
+            return money;
+
+        }
+        public List<string> FindCurrency(string text, string NameDictionary)
         {
             Currency.Clear();
             LoadDictionary(NameDictionary);
-            foreach(string currency in Dictionary)
+            foreach (string currency in Dictionary)
             {
                 if (text.IndexOf(currency) >= 0)
                     Currency.Add(currency);
             }
             return Currency;
         }
+
         //=======================kwota do zapłacenia=========================================<
-
-
     }
 }
